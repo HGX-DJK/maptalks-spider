@@ -214,6 +214,8 @@
       log('PointLayer 初始化完成，共 22 个标记');
       log('layer type: ' + pointLayer.getType());
       log('stackMarker count: ' + spider.stackMarkers.size);
+      log('spiderOverlay: ' + (spider.spiderOverlay ? spider.spiderOverlay.getType() : 'null'));
+      log('_vtLayerType: ' + spider._vtLayerType);
     }
 
     // 添加 10000 个随机分布的点
@@ -342,12 +344,24 @@
     // 点击处理
     map.on('click', function(e) {
       console.log('Map click at', e.containerPoint);
-      var geos = pointLayer.identifyAtPoint(e.containerPoint, { tolerance: 10 });
-      console.log('identified geos:', geos);
 
-      if (geos && geos.length > 0) {
-        for (var i = 0; i < geos.length; i++) {
-          var geo = geos[i];
+      // Check both pointLayer (for base data) and spiderOverlay (for spider markers)
+      var geos = pointLayer.identifyAtPoint(e.containerPoint, { tolerance: 10 });
+      console.log('pointLayer geos:', geos);
+
+      // Also check spiderOverlay if it exists (for VT layer spider markers)
+      var overlayGeos = [];
+      if (spider.spiderOverlay) {
+        overlayGeos = spider.spiderOverlay.identifyAtPoint(e.containerPoint, { tolerance: 10 });
+        console.log('spiderOverlay geos:', overlayGeos);
+      }
+
+      // Combine all geos
+      var allGeos = (geos || []).concat(overlayGeos || []);
+
+      if (allGeos.length > 0) {
+        for (var i = 0; i < allGeos.length; i++) {
+          var geo = allGeos[i];
           console.log('geo type:', geo.getType(), 'props:', geo._isSpiderStack, geo._spiderItem);
           if (geo._isSpiderStack && geo._spiderCoord) {
             spider.spiderfy(geo._spiderCoord);

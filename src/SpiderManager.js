@@ -44,6 +44,8 @@ var SpiderManager = (function () {
     function SpiderManager(layer, options) {
         // layer can be VectorLayer, PointLayer, or any OverlayLayer subclass
         this.layer = layer;
+        this.spiderOverlay = null;
+        this._vtLayerType = null; // cache for layer type detection
         this.coordGroups = new Map();
         this.stackMarkers = new Map();
         this.expandedMarkers = [];
@@ -62,7 +64,30 @@ var SpiderManager = (function () {
             stackSymbol: opts.stackSymbol !== undefined ? opts.stackSymbol : null,
             onSpiderMarkerClick: opts.onSpiderMarkerClick !== undefined ? opts.onSpiderMarkerClick : null
         };
+
+        // Detect if this is a VT layer (PointLayer, LineStringLayer) that doesn't support addGeometry
+        this._detectLayerType();
+        if (this._vtLayerType === 'vt') {
+            // For VT layers, create a VectorLayer overlay for spider geometries
+            var map = this.layer.getMap ? this.layer.getMap() : null;
+            if (map) {
+                this.spiderOverlay = new VectorLayer('spider-overlay-' + Date.now()).addTo(map);
+            }
+        }
     }
+
+    SpiderManager.prototype._detectLayerType = function () {
+        // VectorLayer has addGeometry method, VT layers (PointLayer, LineStringLayer) don't
+        if (typeof this.layer.addGeometry === 'function') {
+            this._vtLayerType = 'vector';
+        } else {
+            this._vtLayerType = 'vt';
+        }
+    };
+
+    SpiderManager.prototype._getActiveLayer = function () {
+        return this._vtLayerType === 'vt' ? this.spiderOverlay : this.layer;
+    };
 
     SpiderManager.prototype.addMarker = function (coord, properties) {
         var item = properties || {};
@@ -153,12 +178,13 @@ var SpiderManager = (function () {
                 var startCoord = Array.isArray(coords) ? coords[0] : coords;
                 return this._coordKey([startCoord.x, startCoord.y]) === prevActiveCoord;
             }.bind(this));
+            var activeLayer = this._getActiveLayer();
             for (var i = 0; i < prevMarkers.length; i++) {
-                this.layer.removeGeometry(prevMarkers[i]);
+                activeLayer.removeGeometry(prevMarkers[i]);
                 prevMarkers[i].remove();
             }
             for (var j = 0; j < prevLines.length; j++) {
-                this.layer.removeGeometry(prevLines[j]);
+                activeLayer.removeGeometry(prevLines[j]);
                 prevLines[j].remove();
             }
             this.expandedMarkers = this.expandedMarkers.filter(function (m) { return m._spiderParentKey !== prevActiveCoord; });
@@ -187,7 +213,7 @@ var SpiderManager = (function () {
                 }
             });
             this.expandedLines.push(line);
-            this.layer.addGeometry(line);
+            this._getActiveLayer().addGeometry(line);
             if (enableAnimation) {
                 line.animate({
                     symbol: { lineOpacity: 0.6 }
@@ -221,7 +247,7 @@ var SpiderManager = (function () {
 
             newMarkers.push(marker);
             this.expandedMarkers.push(marker);
-            this.layer.addGeometry(marker);
+            this._getActiveLayer().addGeometry(marker);
         }
 
         var stackMarker = this.stackMarkers.get(key);
@@ -321,12 +347,13 @@ var SpiderManager = (function () {
                 var startCoord = Array.isArray(coords) ? coords[0] : coords;
                 return self._coordKey([startCoord.x, startCoord.y]) !== activeKey;
             });
+            var activeLayer = this._getActiveLayer();
             for (var i = 0; i < markersToRemove.length; i++) {
-                this.layer.removeGeometry(markersToRemove[i]);
+                activeLayer.removeGeometry(markersToRemove[i]);
                 markersToRemove[i].remove();
             }
             for (var j = 0; j < linesToRemove.length; j++) {
-                this.layer.removeGeometry(linesToRemove[j]);
+                activeLayer.removeGeometry(linesToRemove[j]);
                 linesToRemove[j].remove();
             }
             if (stackMarker) {
@@ -392,13 +419,13 @@ var SpiderManager = (function () {
                     var startCoord = Array.isArray(coords) ? coords[0] : coords;
                     return self._coordKey([startCoord.x, startCoord.y]) !== activeKey;
                 });
-
+                var activeLayer = self._getActiveLayer();
                 for (var k = 0; k < markersToRemove.length; k++) {
-                    self.layer.removeGeometry(markersToRemove[k]);
+                    activeLayer.removeGeometry(markersToRemove[k]);
                     markersToRemove[k].remove();
                 }
                 for (var l = 0; l < linesToRemove.length; l++) {
-                    self.layer.removeGeometry(linesToRemove[l]);
+                    activeLayer.removeGeometry(linesToRemove[l]);
                     linesToRemove[l].remove();
                 }
                 if (stackMarker) {
@@ -447,8 +474,11 @@ var SpiderManager = (function () {
         this.unspiderfy();
 
         var self = this;
+        var clearLayer = this._vtLayerType === 'vt' ? this.spiderOverlay : this.layer;
         this.stackMarkers.forEach(function (marker) {
-            self.layer.removeGeometry(marker);
+            if (clearLayer) {
+                clearLayer.removeGeometry(marker);
+            }
         });
         this.stackMarkers.clear();
         this.coordGroups.clear();
@@ -459,12 +489,19 @@ var SpiderManager = (function () {
         this.clear();
 
         var self = this;
+        var clearLayer = this._vtLayerType === 'vt' ? this.spiderOverlay : this.layer;
         this.stackMarkers.forEach(function (marker) {
-            self.layer.removeGeometry(marker);
+            if (clearLayer) {
+                clearLayer.removeGeometry(marker);
+            }
         });
         this.stackMarkers.clear();
         this.coordGroups.clear();
         this.idIndex.clear();
+        if (this.spiderOverlay) {
+            this.spiderOverlay.remove();
+            this.spiderOverlay = null;
+        }
         this.layer = null;
         this.options = {};
     };
@@ -621,7 +658,18 @@ var SpiderManager = (function () {
         }
 
         this.stackMarkers.set(key, marker);
-        this.layer.addGeometry(marker);
+        // Ensure layer type is detected (for setData which doesn't go through constructor)
+        if (this._vtLayerType === null) {
+            this._detectLayerType();
+        }
+        if (this._vtLayerType === 'vt') {
+            // For VT layers (PointLayer, etc.), add stack markers to spiderOverlay instead
+            if (this.spiderOverlay) {
+                this.spiderOverlay.addGeometry(marker);
+            }
+        } else {
+            this.layer.addGeometry(marker);
+        }
     };
 
     SpiderManager.prototype._convertToStack = function (key, group) {
