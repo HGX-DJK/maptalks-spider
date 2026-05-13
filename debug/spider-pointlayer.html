@@ -2,9 +2,10 @@
 <html>
 <head>
   <meta charset="UTF-8"/>
-  <script type="text/javascript" src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script>
+  <!-- <script type="text/javascript" src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script> -->
+  <script type="text/javascript" src="https://unpkg.com/maptalks-gl/dist/maptalks-gl.js"></script>
   <script type="text/javascript" src="../dist/maptalks-spider.js"></script>
-  <title>Spider Marker - 蛛网散开效果</title>
+  <title>Spider Marker - PointLayer 测试</title>
   <style>
     * { margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; }
@@ -44,11 +45,11 @@
       background: rgba(50,50,50,0.95);
     }
     .btn-primary {
-      background: #4CAF50;
-      border-color: #45a049;
+      background: #2196F3;
+      border-color: #1976D2;
     }
     .btn-primary:hover {
-      background: #45a049;
+      background: #1976D2;
     }
     .btn-danger {
       background: #f44336;
@@ -72,6 +73,14 @@
       overflow-y: auto;
       z-index: 1000;
     }
+    .layer-info {
+      background: rgba(33, 150, 243, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
     .api-table {
       background: rgba(0,0,0,0.85);
       color: #fff;
@@ -83,7 +92,7 @@
     .api-table-title {
       font-weight: bold;
       margin-bottom: 6px;
-      color: #4CAF50;
+      color: #2196F3;
     }
     table {
       border-collapse: collapse;
@@ -103,6 +112,7 @@
   <div id="info">点击标记查看详情</div>
 
   <div id="controls">
+    <div class="layer-info">PointLayer 测试 (maptalks-gl)</div>
     <div class="api-table">
       <div class="api-table-title">SpiderManager API</div>
       <table>
@@ -126,7 +136,6 @@
     <button class="btn" onclick="testReAdd()">重新添加</button>
     <button class="btn" onclick="add10000Points()">+10000随机点</button>
     <button class="btn" onclick="add10GroupStacked()">+10组堆叠点</button>
-    <button class="btn" onclick="addMixedPoints()">+混合大数据</button>
   </div>
 
   <div id="log" class="log"></div>
@@ -136,7 +145,7 @@
     var centerLat = 31.247;
     var range = 0.5;
 
-    var vectorLayer, spider;
+    var pointLayer, spider;
 
     // 点击回调函数
     function onSpiderMarkerClick(item) {
@@ -166,20 +175,27 @@
     }));
 
     function init() {
-      vectorLayer = new maptalks.VectorLayer('markers').addTo(map);
+      // 使用 PointLayer 从 maptalks-gl
+      pointLayer = new maptalks.PointLayer('markers').addTo(map);
 
-      spider = new maptalks.SpiderManager(vectorLayer, {
-        spiderRadius: 20,
-        spiderLineColor: '#4a8af4',
+      spider = new maptalks.SpiderManager(pointLayer, {
+        spiderRadius: 40,
+        spiderLineColor: '#2196F3',
         markerSymbol: {
-          markerFile: './start.png',
-          markerWidth: 32,
-          markerHeight: 32
+          markerType: 'ellipse',
+          markerWidth: 20,
+          markerHeight: 20,
+          markerFill: '#4CAF50',
+          markerLineColor: '#fff',
+          markerLineWidth: 2
         },
         stackSymbol: {
-          markerFile: './aoi.png',
-          markerWidth: 48,
-          markerHeight: 48
+          markerType: 'ellipse',
+          markerWidth: 32,
+          markerHeight: 32,
+          markerFill: '#FF5722',
+          markerLineColor: '#fff',
+          markerLineWidth: 2
         }
       });
 
@@ -195,8 +211,9 @@
       spider.addMarker([121.510, 31.248], { id: 21, name: '海底捞', desc: '火锅' });
       spider.addMarker([121.510, 31.248], { id: 22, name: '呷哺', desc: '小火锅' });
 
-      log('初始化完成，共 22 个标记');
-      log('堆叠坐标 121.507,31.247 有 20 个');
+      log('PointLayer 初始化完成，共 22 个标记');
+      log('layer type: ' + pointLayer.getType());
+      log('stackMarker count: ' + spider.stackMarkers.size);
     }
 
     // 添加 10000 个随机分布的点
@@ -245,45 +262,6 @@
       map.setZoom(15);
     }
 
-    // 添加更多标记（混合模式）
-    function addMixedPoints() {
-      log('开始添加混合数据: 10000随机点 + 10组堆叠点...');
-      var startTime = performance.now();
-      var data = [];
-
-      // 10000 随机点
-      for (var i = 0; i < 10000; i++) {
-        var lng = centerLng + (Math.random() - 0.5) * range;
-        var lat = centerLat + (Math.random() - 0.5) * range;
-        data.push({
-          coord: [lng, lat],
-          id: 30000 + i,
-          name: '随机-' + i,
-          desc: '随机点 #' + i
-        });
-      }
-
-      // 10 组堆叠点
-      for (var g = 0; g < 10; g++) {
-        var lng = centerLng + (Math.random() - 0.5) * range;
-        var lat = centerLat + (Math.random() - 0.5) * range;
-        for (var i = 0; i < 10; i++) {
-          data.push({
-            coord: [lng, lat],
-            id: 40000 + g * 10 + i,
-            name: '堆叠组' + (g + 1) + '-' + (i + 1),
-            desc: '第 ' + (g + 1) + ' 组，10个重叠点'
-          });
-        }
-      }
-
-      spider.setData(data);
-      var endTime = performance.now();
-      log('混合数据添加完成，共 ' + data.length + ' 个点，耗时 ' + (endTime - startTime).toFixed(2) + 'ms');
-      map.setCenter([centerLng, centerLat]);
-      map.setZoom(14);
-    }
-
     // 测试 getMarkerById
     function testGetMarkerById() {
       var item = spider.getMarkerById(1);
@@ -298,7 +276,7 @@
     function testGetGeometryById() {
       var geo = spider.getGeometryById(2);
       if (geo) {
-        log('getGeometryById(2): Marker');
+        log('getGeometryById(2): ' + geo.getType());
       } else {
         log('getGeometryById(2): null');
       }
@@ -344,14 +322,14 @@
     // 测试 remove
     function testRemoveLayer() {
       log('remove()');
-      if (vectorLayer) {
-        vectorLayer.remove();
+      if (pointLayer) {
+        pointLayer.remove();
       }
     }
 
     // 重新添加
     function testReAdd() {
-      if (!vectorLayer || !vectorLayer.getMap()) {
+      if (!pointLayer || !pointLayer.getMap()) {
         init();
         log('重新初始化完成');
       } else {
@@ -363,11 +341,14 @@
 
     // 点击处理
     map.on('click', function(e) {
-      var geos = vectorLayer.identifyAtPoint(e.containerPoint, { tolerance: 0 });
+      console.log('Map click at', e.containerPoint);
+      var geos = pointLayer.identifyAtPoint(e.containerPoint, { tolerance: 10 });
+      console.log('identified geos:', geos);
 
       if (geos && geos.length > 0) {
         for (var i = 0; i < geos.length; i++) {
           var geo = geos[i];
+          console.log('geo type:', geo.getType(), 'props:', geo._isSpiderStack, geo._spiderItem);
           if (geo._isSpiderStack && geo._spiderCoord) {
             spider.spiderfy(geo._spiderCoord);
             return;
@@ -384,7 +365,7 @@
     });
 
     init();
-    document.getElementById('info').textContent = '点击堆叠标记展开';
+    document.getElementById('info').textContent = '点击堆叠标记展开 (PointLayer)';
   </script>
 </body>
 </html>

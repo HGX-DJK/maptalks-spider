@@ -35,6 +35,13 @@ npm run dev     # 开发监听模式
 
 ## Usage
 
+### Supported Layer Types
+
+SpiderManager supports any layer that extends `OverlayLayer`:
+- `VectorLayer` - Vector geometry layer
+- `PointLayer` - Point data layer
+- Any custom `OverlayLayer` subclass
+
 ### Browser (Vanilla JS)
 
 ```html
@@ -46,6 +53,7 @@ const map = new maptalks.Map('map', {
   zoom: 12
 });
 
+// Use VectorLayer (or PointLayer)
 const layer = new maptalks.VectorLayer('spider').addTo(map);
 const spider = new maptalks.SpiderManager(layer, {
   spiderRadius: 60,
@@ -101,7 +109,7 @@ spider.unspiderfy();
 new maptalks.SpiderManager(layer, options)
 ```
 
-- `layer` : VectorLayer - maptalks vector layer
+- `layer` : OverlayLayer - VectorLayer, PointLayer, or any OverlayLayer subclass
 - `options` : SpiderOptions (optional)
   - `spiderRadius` : number - Expansion radius (default: 60)
   - `spiderLineColor` : string - Line color (default: '#DE3333')

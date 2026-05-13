@@ -1,9 +1,11 @@
 // Use maptalks from global scope (loaded via script tag before this plugin)
+// OverlayLayer is the base class for VectorLayer and PointLayer
 var VectorLayer = maptalks.VectorLayer;
 var Coordinate = maptalks.Coordinate;
 var Point = maptalks.Point;
 var LineString = maptalks.LineString;
 var Marker = maptalks.Marker;
+var OverlayLayer = maptalks.OverlayLayer;
 
 export var SpiderMarkerItem = {
     coord: [],
@@ -40,6 +42,7 @@ var AnimationState = {
 
 var SpiderManager = (function () {
     function SpiderManager(layer, options) {
+        // layer can be VectorLayer, PointLayer, or any OverlayLayer subclass
         this.layer = layer;
         this.coordGroups = new Map();
         this.stackMarkers = new Map();
