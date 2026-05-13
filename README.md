@@ -2,28 +2,52 @@
 
 A spider expansion manager plugin for [maptalks](https://maptalks.github.io/) - handles overlapping markers with spiral expansion animation.
 
+## Project Structure
+
+```
+maptalks-spider/
+├── src/
+│   └── SpiderManager.js   # 源码
+├── debug/
+│   ├── spider-marker.html # 测试页面
+│   ├── start.png         # 标记图标
+│   └── aoi.png           # 堆叠图标
+├── dist/
+│   ├── maptalks-spider.js      # UMD 格式
+│   └── maptalks-spider.es.js   # ES Module 格式
+├── package.json
+├── rollup.config.js
+└── README.md
+```
+
 ## Install
 
 ```bash
-npm install maptalks-spider
+npm install
+```
+
+## Build
+
+```bash
+npm run build   # 生产构建
+npm run dev     # 开发监听模式
 ```
 
 ## Usage
 
-### ES6 Module
+### Browser (Vanilla JS)
 
-```javascript
-import { SpiderManager } from 'maptalks-spider';
-import VectorLayer from 'maptalks/dist/VectorLayer';
-import Map from 'maptalks/dist/Map';
-
-const map = new Map('map', {
+```html
+<script src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script>
+<script src="../dist/maptalks-spider.js"></script>
+<script>
+const map = new maptalks.Map('map', {
   center: [116.4, 39.9],
   zoom: 12
 });
 
-const layer = new VectorLayer('spider').addTo(map);
-const spider = new SpiderManager(layer, {
+const layer = new maptalks.VectorLayer('spider').addTo(map);
+const spider = new maptalks.SpiderManager(layer, {
   spiderRadius: 60,
   spiderLineColor: '#DE3333'
 });
@@ -40,10 +64,6 @@ spider.setData([
   { coord: [116.5, 40.0], id: 3 }
 ]);
 
-// Expand/Collapse
-spider.spiderfy([116.4, 39.9]);  // expand
-spider.unspiderfy();              // collapse
-
 // Click handler for stacked markers
 layer.on('click', function(e) {
   const coord = [e.coordinate.x, e.coordinate.y];
@@ -53,13 +73,24 @@ layer.on('click', function(e) {
     spider.unspiderfy();
   }
 });
+</script>
 ```
 
-### Browser (Vanilla JS)
+### ES6 Module
 
-```html
-<script src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script>
-<script src="https://unpkg.com/maptalks-spider/dist/maptalks-spider.js"></script>
+```javascript
+import { SpiderManager } from 'maptalks-spider';
+
+const layer = new maptalks.VectorLayer('spider').addTo(map);
+const spider = new SpiderManager(layer, {
+  spiderRadius: 60,
+  spiderLineColor: '#DE3333'
+});
+
+spider.addMarker([116.4, 39.9], { id: 1 });
+spider.addMarker([116.4, 39.9], { id: 2 });
+spider.spiderfy([116.4, 39.9]);
+spider.unspiderfy();
 ```
 
 ## API
@@ -67,7 +98,7 @@ layer.on('click', function(e) {
 ### Constructor
 
 ```javascript
-new SpiderManager(layer, options)
+new maptalks.SpiderManager(layer, options)
 ```
 
 - `layer` : VectorLayer - maptalks vector layer
