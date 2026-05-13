@@ -1,0 +1,40 @@
+{
+  "name": "maptalks-spider",
+  "version": "1.0.0",
+  "description": "A spider expansion manager for maptalks - handles overlapping markers with spiral expansion",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "main": "dist/maptalks-spider.js",
+  "module": "dist/maptalks-spider.es.js",
+  "jsnext:main": "dist/maptalks-spider.es.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "rollup -w -c rollup.config.js",
+    "build": "rollup --environment BUILD:production -c rollup.config.js",
+    "build-dev": "rollup -c rollup.config.js",
+    "build:types": "tsc --emitDeclarationOnly"
+  },
+  "keywords": [
+    "maptalks",
+    "spider",
+    "marker",
+    "cluster"
+  ],
+  "peerDependencies": {
+    "maptalks": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^20.0.0",
+    "@rollup/plugin-json": "^4.1.0",
+    "@rollup/plugin-node-resolve": "^13.0.4",
+    "@rollup/plugin-typescript": "^2.0.0",
+    "@rollup/plugin-replace": "^4.0.0",
+    "maptalks": "^1.0.0",
+    "rollup": "^2.56.2",
+    "rollup-plugin-terser": "^7.0.2",
+    "typescript": "^5.3.0"
+  }
+}

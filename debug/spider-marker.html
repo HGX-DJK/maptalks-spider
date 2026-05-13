@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+<script type="text/javascript" src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script>
+  <script type="text/javascript" src="../dist/maptalks-spider.js"></script>
+  <title>Spider Marker - 蛛网散开效果</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; }
+    #map { width: 100%; height: 100%; }
+    #info {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.85);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 20px;
+      font-size: 14px;
+      z-index: 1000;
+    }
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .btn {
+      padding: 8px 14px;
+      background: rgba(0,0,0,0.85);
+      color: white;
+      border: 1px solid #444;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: rgba(50,50,50,0.95);
+    }
+    .btn-primary {
+      background: #4CAF50;
+      border-color: #45a049;
+    }
+    .btn-primary:hover {
+      background: #45a049;
+    }
+    .btn-danger {
+      background: #f44336;
+      border-color: #d32f2f;
+    }
+    .btn-danger:hover {
+      background: #d32f2f;
+    }
+    .log {
+      position: absolute;
+      bottom: 80px;
+      left: 10px;
+      background: rgba(0,0,0,0.9);
+      color: #0f0;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: monospace;
+      max-width: 350px;
+      max-height: 150px;
+      overflow-y: auto;
+      z-index: 1000;
+    }
+    .api-table {
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+    .api-table-title {
+      font-weight: bold;
+      margin-bottom: 6px;
+      color: #4CAF50;
+    }
+    table {
+      border-collapse: collapse;
+    }
+    td {
+      padding: 2px 6px;
+      border: 1px solid #333;
+      color: #ccc;
+    }
+    td:first-child {
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="info">点击标记查看详情</div>
+
+  <div id="controls">
+    <div class="api-table">
+      <div class="api-table-title">SpiderManager API</div>
+      <table>
+        <tr><td>getMarkerById(id)</td><td>通过 ID 获取 item</td></tr>
+        <tr><td>getGeometryById(id)</td><td>获取 Marker</td></tr>
+        <tr><td>removeMarker(id)</td><td>移除标记</td></tr>
+        <tr><td>clear()</td><td>清空所有</td></tr>
+        <tr><td>spiderfy(coord)</td><td>展开</td></tr>
+        <tr><td>unspiderfy()</td><td>折叠</td></tr>
+        <tr><td>isStacked(coord)</td><td>是否堆叠</td></tr>
+      </table>
+    </div>
+    <button class="btn btn-primary" onclick="testGetMarkerById()">getMarkerById(1)</button>
+    <button class="btn btn-primary" onclick="testGetGeometryById()">getGeometryById(2)</button>
+    <button class="btn" onclick="testIsStacked()">isStacked()</button>
+    <button class="btn" onclick="testSpiderfy()">spiderfy()</button>
+    <button class="btn" onclick="testUnspiderfy()">unspiderfy()</button>
+    <button class="btn" onclick="testRemoveMarker()">removeMarker(3)</button>
+    <button class="btn" onclick="testClear()">clear()</button>
+    <button class="btn btn-danger" onclick="testRemoveLayer()">remove() 图层</button>
+    <button class="btn" onclick="testReAdd()">重新添加</button>
+    <button class="btn" onclick="add10000Points()">+10000随机点</button>
+    <button class="btn" onclick="add10GroupStacked()">+10组堆叠点</button>
+    <button class="btn" onclick="addMixedPoints()">+混合大数据</button>
+  </div>
+
+  <div id="log" class="log"></div>
+
+  <script>
+    var centerLng = 121.507;
+    var centerLat = 31.247;
+    var range = 0.5;
+
+    var vectorLayer, spider;
+
+    // 点击回调函数
+    function onSpiderMarkerClick(item) {
+      document.getElementById('info').innerHTML = '<b>' + item.name + '</b><br>' + item.desc;
+    }
+
+    // 日志输出
+    function log(msg) {
+      console.log(msg);
+      var logDiv = document.getElementById('log');
+      var p = document.createElement('p');
+      p.style.margin = '1px 0';
+      p.textContent = '> ' + msg;
+      logDiv.appendChild(p);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    // 初始化地图
+    var map = new maptalks.Map('map', {
+      center: [121.507, 31.247],
+      zoom: 16
+    });
+
+    map.setBaseLayer(new maptalks.TileLayer('gaode', {
+      urlTemplate: 'https://webrd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
+      subdomains: [1, 2, 3, 4]
+    }));
+
+    function init() {
+      vectorLayer = new maptalks.VectorLayer('markers').addTo(map);
+
+      spider = new maptalks.SpiderManager(vectorLayer, {
+        spiderRadius: 20,
+        spiderLineColor: '#4a8af4',
+        markerSymbol: {
+          markerFile: './start.png',
+          markerWidth: 32,
+          markerHeight: 32
+        },
+        stackSymbol: {
+          markerFile: './aoi.png',
+          markerWidth: 48,
+          markerHeight: 48
+        }
+      });
+
+      var names = ['星巴克', '瑞幸', '太平洋', '麦咖啡', '库迪', '奈茶', '喜茶', '乐乐茶', '贡茶', 'CoCo都可',
+                   '一点点', '益禾堂', '蜜雪冰城', '书亦', '茶百道', '沪上阿姨', '喜姐', '藤好吃', '烧烤', '火锅'];
+      for (var i = 1; i <= 20; i++) {
+        spider.addMarker([121.507, 31.247], {
+          id: i,
+          name: names[i - 1] || ('店铺' + i),
+          desc: '店铺 #' + i
+        });
+      }
+      spider.addMarker([121.510, 31.248], { id: 21, name: '海底捞', desc: '火锅' });
+      spider.addMarker([121.510, 31.248], { id: 22, name: '呷哺', desc: '小火锅' });
+
+      log('初始化完成，共 22 个标记');
+      log('堆叠坐标 121.507,31.247 有 20 个');
+    }
+
+    // 添加 10000 个随机分布的点
+    function add10000Points() {
+      log('开始添加 10000 个随机点...');
+      var startTime = performance.now();
+      var data = [];
+      for (var i = 0; i < 10000; i++) {
+        var lng = centerLng + (Math.random() - 0.5) * range;
+        var lat = centerLat + (Math.random() - 0.5) * range;
+        data.push({
+          coord: [lng, lat],
+          id: 10000 + i,
+          name: '随机点-' + i,
+          desc: '经度:' + lng.toFixed(6) + ' 纬度:' + lat.toFixed(6)
+        });
+      }
+      spider.setData(data);
+      var endTime = performance.now();
+      log('10000 个点添加完成，耗时 ' + (endTime - startTime).toFixed(2) + 'ms');
+      map.setCenter([centerLng, centerLat]);
+      map.setZoom(14);
+    }
+
+    // 添加 10 组堆叠点，每组 10 个
+    function add10GroupStacked() {
+      log('开始添加 10 组堆叠点，每组 10 个...');
+      var startTime = performance.now();
+      var data = [];
+      for (var g = 0; g < 10; g++) {
+        var lng = centerLng + (Math.random() - 0.5) * range;
+        var lat = centerLat + (Math.random() - 0.5) * range;
+        for (var i = 0; i < 10; i++) {
+          data.push({
+            coord: [lng, lat],
+            id: 20000 + g * 10 + i,
+            name: '组' + (g + 1) + '-点' + (i + 1),
+            desc: '第 ' + (g + 1) + ' 组，坐标: ' + lng.toFixed(6) + ',' + lat.toFixed(6)
+          });
+        }
+      }
+      spider.setData(data);
+      var endTime = performance.now();
+      log('100 个堆叠点添加完成，耗时 ' + (endTime - startTime).toFixed(2) + 'ms');
+      map.setCenter([centerLng, centerLat]);
+      map.setZoom(15);
+    }
+
+    // 添加更多标记（混合模式）
+    function addMixedPoints() {
+      log('开始添加混合数据: 10000随机点 + 10组堆叠点...');
+      var startTime = performance.now();
+      var data = [];
+
+      // 10000 随机点
+      for (var i = 0; i < 10000; i++) {
+        var lng = centerLng + (Math.random() - 0.5) * range;
+        var lat = centerLat + (Math.random() - 0.5) * range;
+        data.push({
+          coord: [lng, lat],
+          id: 30000 + i,
+          name: '随机-' + i,
+          desc: '随机点 #' + i
+        });
+      }
+
+      // 10 组堆叠点
+      for (var g = 0; g < 10; g++) {
+        var lng = centerLng + (Math.random() - 0.5) * range;
+        var lat = centerLat + (Math.random() - 0.5) * range;
+        for (var i = 0; i < 10; i++) {
+          data.push({
+            coord: [lng, lat],
+            id: 40000 + g * 10 + i,
+            name: '堆叠组' + (g + 1) + '-' + (i + 1),
+            desc: '第 ' + (g + 1) + ' 组，10个重叠点'
+          });
+        }
+      }
+
+      spider.setData(data);
+      var endTime = performance.now();
+      log('混合数据添加完成，共 ' + data.length + ' 个点，耗时 ' + (endTime - startTime).toFixed(2) + 'ms');
+      map.setCenter([centerLng, centerLat]);
+      map.setZoom(14);
+    }
+
+    // 测试 getMarkerById
+    function testGetMarkerById() {
+      var item = spider.getMarkerById(1);
+      if (item) {
+        log('getMarkerById(1): ' + JSON.stringify(item));
+      } else {
+        log('getMarkerById(1): null');
+      }
+    }
+
+    // 测试 getGeometryById
+    function testGetGeometryById() {
+      var geo = spider.getGeometryById(2);
+      if (geo) {
+        log('getGeometryById(2): Marker');
+      } else {
+        log('getGeometryById(2): null');
+      }
+    }
+
+    // 测试 isStacked
+    function testIsStacked() {
+      var coord = [121.507, 31.247];
+      var stacked = spider.isStacked(coord);
+      var count = spider.getGroupCount(coord);
+      log('isStacked(' + coord + '): ' + stacked + ' (count=' + count + ')');
+    }
+
+    // 测试 spiderfy
+    function testSpiderfy() {
+      spider.spiderfy([121.507, 31.247]);
+      log('spiderfy([121.507, 31.247])');
+    }
+
+    // 测试 unspiderfy
+    function testUnspiderfy() {
+      spider.unspiderfy();
+      log('unspiderfy()');
+    }
+
+    // 测试 removeMarker
+    function testRemoveMarker() {
+      var item = spider.getMarkerById(3);
+      if (item) {
+        log('removeMarker(3): ' + item.name);
+        spider.removeMarker(3);
+      } else {
+        log('removeMarker(3): null');
+      }
+    }
+
+    // 测试 clear
+    function testClear() {
+      log('clear()');
+      spider.clear();
+    }
+
+    // 测试 remove
+    function testRemoveLayer() {
+      log('remove()');
+      if (vectorLayer) {
+        vectorLayer.remove();
+      }
+    }
+
+    // 重新添加
+    function testReAdd() {
+      if (!vectorLayer || !vectorLayer.getMap()) {
+        init();
+        log('重新初始化完成');
+      } else {
+        spider.clear();
+        init();
+        log('数据已重新加载');
+      }
+    }
+
+    // 点击处理
+    map.on('click', function(e) {
+      var geos = vectorLayer.identifyAtPoint(e.containerPoint, { tolerance: 0 });
+
+      if (geos && geos.length > 0) {
+        for (var i = 0; i < geos.length; i++) {
+          var geo = geos[i];
+          if (geo._isSpiderStack && geo._spiderCoord) {
+            spider.spiderfy(geo._spiderCoord);
+            return;
+          }
+          if (geo._spiderItem) {
+            onSpiderMarkerClick(geo._spiderItem);
+            return;
+          }
+        }
+        spider.unspiderfy();
+      } else {
+        spider.unspiderfy();
+      }
+    });
+
+    init();
+    document.getElementById('info').textContent = '点击堆叠标记展开';
+  </script>
+</body>
+</html>
