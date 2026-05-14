@@ -1,4 +1,5 @@
-// Use maptalks from global scope (loaded via script tag before this plugin)
+import * as maptalks from 'maptalks';
+
 var VectorLayer = maptalks.VectorLayer;
 var Coordinate = maptalks.Coordinate;
 var Point = maptalks.Point;
@@ -19,30 +20,15 @@ export var SpiderOptions = {
     onSpiderMarkerClick: null
 };
 
-var SpiderMarker = {
-    _spiderItem: null,
-    _spiderParentKey: null,
-    _isSpiderExpanded: false,
-    _targetPosition: null,
-    _targetSymbol: null,
-    _isSpiderStack: false,
-    _spiderGroup: null,
-    _spiderKey: null,
-    _spiderCoord: null
-};
-
-var AnimationState = {
-    activeKey: '',
-    stackMarker: null,
-    markersToRemove: [],
-    linesToRemove: []
-};
-
 var SpiderManager = (function () {
     function SpiderManager(layer, options) {
+        // layer can be VectorLayer, PointLayer, or any OverlayLayer subclass
         this.layer = layer;
+        this.spiderOverlay = null;
+        this._vtLayerType = null; // cache for layer type detection
         this.coordGroups = new Map();
         this.stackMarkers = new Map();
+        this.geometryLayers = new Map();
         this.expandedMarkers = [];
         this.expandedLines = [];
         this.activeCoord = null;
@@ -59,7 +45,107 @@ var SpiderManager = (function () {
             stackSymbol: opts.stackSymbol !== undefined ? opts.stackSymbol : null,
             onSpiderMarkerClick: opts.onSpiderMarkerClick !== undefined ? opts.onSpiderMarkerClick : null
         };
+
+        // Detect if this is a VT layer (PointLayer, LineStringLayer) that needs an overlay for Marker geometries.
+        this._detectLayerType();
+        if (this._vtLayerType === 'vt') {
+            this._ensureSpiderOverlay();
+        }
     }
+
+    SpiderManager.prototype._detectLayerType = function () {
+        var type = this.layer && typeof this.layer.getType === 'function' ? this.layer.getType() : '';
+        var ctorName = this.layer && this.layer.constructor ? this.layer.constructor.name : '';
+        var jsonType = this.layer && typeof this.layer.getJSONType === 'function' ? this.layer.getJSONType() : '';
+        var layerText = '';
+        try {
+            layerText = this.layer ? String(this.layer) : '';
+        } catch (e) {
+            layerText = '';
+        }
+        var layerName = [type, ctorName, jsonType, layerText].join(' ');
+
+        if (/(PointLayer|LineStringLayer)/i.test(layerName)) {
+            this._vtLayerType = 'vt';
+        } else if ((VectorLayer && this.layer instanceof VectorLayer) || /VectorLayer/i.test(layerName)) {
+            this._vtLayerType = 'vector';
+        } else {
+            this._vtLayerType = 'vt';
+        }
+    };
+
+    SpiderManager.prototype._ensureSpiderOverlay = function () {
+        if (this._vtLayerType !== 'vt') {
+            return this.layer;
+        }
+
+        if (this.spiderOverlay) {
+            return this.spiderOverlay;
+        }
+
+        var map = this.layer && this.layer.getMap ? this.layer.getMap() : null;
+        if (map) {
+            this.spiderOverlay = new VectorLayer('spider-overlay-' + Date.now()).addTo(map);
+        }
+
+        return this.spiderOverlay;
+    };
+
+    SpiderManager.prototype._getActiveLayer = function () {
+        return this._vtLayerType === 'vt' ? this._ensureSpiderOverlay() : this.layer;
+    };
+
+    SpiderManager.prototype._addGeometry = function (geometry) {
+        var activeLayer = this._getActiveLayer();
+        if (!activeLayer) return;
+
+        try {
+            activeLayer.addGeometry(geometry);
+            this.geometryLayers.set(geometry, activeLayer);
+        } catch (e) {
+            if (this._vtLayerType !== 'vt' && /PointLayer|LineStringLayer/i.test(e && e.message ? e.message : '')) {
+                this._vtLayerType = 'vt';
+                activeLayer = this._ensureSpiderOverlay();
+                if (activeLayer) {
+                    activeLayer.addGeometry(geometry);
+                    this.geometryLayers.set(geometry, activeLayer);
+                    return;
+                }
+            }
+            throw e;
+        }
+    };
+
+    SpiderManager.prototype._removeGeometry = function (geometry) {
+        var layer = this.geometryLayers.get(geometry) || this._getActiveLayer();
+        if (layer) {
+            layer.removeGeometry(geometry);
+        }
+        this.geometryLayers.delete(geometry);
+    };
+
+    SpiderManager.prototype._bindMarkerClick = function (marker) {
+        if (!marker || marker._spiderClickBound || typeof marker.on !== 'function') {
+            return;
+        }
+
+        var self = this;
+        marker._spiderClickBound = true;
+        marker.on('click', function (e) {
+            if (e && e.domEvent && typeof e.domEvent.stopPropagation === 'function') {
+                e.domEvent.stopPropagation();
+            }
+
+            if (marker._isSpiderStack && marker._spiderCoord) {
+                self.spiderfy(marker._spiderCoord);
+                return;
+            }
+
+            if (marker._spiderItem && typeof self.options.onSpiderMarkerClick === 'function') {
+                self.options.onSpiderMarkerClick(marker._spiderItem, marker, e);
+            }
+        });
+    };
 
     SpiderManager.prototype.addMarker = function (coord, properties) {
         var item = properties || {};
@@ -127,17 +213,17 @@ var SpiderManager = (function () {
 
     SpiderManager.prototype.spiderfy = function (coord, options) {
         var opts = options || {};
-        if (this._isAnimating) return;
+        if (this._isAnimating) return this;
 
         var key = this._coordKey(coord);
         var group = this.coordGroups.get(key);
 
         if (!group || group.length <= 1) {
-            return;
+            return this;
         }
 
         if (this.activeCoord === key) {
-            return;
+            return this;
         }
 
         var prevActiveCoord = this.activeCoord;
@@ -151,11 +237,11 @@ var SpiderManager = (function () {
                 return this._coordKey([startCoord.x, startCoord.y]) === prevActiveCoord;
             }.bind(this));
             for (var i = 0; i < prevMarkers.length; i++) {
-                this.layer.removeGeometry(prevMarkers[i]);
+                this._removeGeometry(prevMarkers[i]);
                 prevMarkers[i].remove();
             }
             for (var j = 0; j < prevLines.length; j++) {
-                this.layer.removeGeometry(prevLines[j]);
+                this._removeGeometry(prevLines[j]);
                 prevLines[j].remove();
             }
             this.expandedMarkers = this.expandedMarkers.filter(function (m) { return m._spiderParentKey !== prevActiveCoord; });
@@ -184,7 +270,7 @@ var SpiderManager = (function () {
                 }
             });
             this.expandedLines.push(line);
-            this.layer.addGeometry(line);
+            this._addGeometry(line);
             if (enableAnimation) {
                 line.animate({
                     symbol: { lineOpacity: 0.6 }
@@ -215,10 +301,11 @@ var SpiderManager = (function () {
             marker._isSpiderExpanded = true;
             marker._targetPosition = positions[l];
             marker._targetSymbol = itemSymbol;
+            this._bindMarkerClick(marker);
 
             newMarkers.push(marker);
             this.expandedMarkers.push(marker);
-            this.layer.addGeometry(marker);
+            this._addGeometry(marker);
         }
 
         var stackMarker = this.stackMarkers.get(key);
@@ -233,12 +320,14 @@ var SpiderManager = (function () {
             for (var m = 0; m < newMarkers.length; m++) {
                 var mk = newMarkers[m];
                 mk.setCoordinates(positions[m]);
-                mk.setSymbol({
+                mk.setSymbol(Object.assign({}, mk._targetSymbol, {
                     markerOpacity: 1,
                     markerSize: 1
-                });
+                }));
             }
         }
+
+        return this;
     };
 
     SpiderManager.prototype._animateExpand = function (markers, positions) {
@@ -246,6 +335,10 @@ var SpiderManager = (function () {
         var startTime = performance.now();
         var delayStep = 30;
         var self = this;
+        var startPositions = markers.map(function (marker) {
+            var coord = marker.getCoordinates();
+            return [coord.x, coord.y];
+        });
 
         function animateFrame() {
             var elapsed = performance.now() - startTime;
@@ -257,19 +350,17 @@ var SpiderManager = (function () {
                 var t = Math.min(1, markerElapsed / duration);
                 var ease = self._easeOutBack(t);
 
-                var startCoord = marker.getCoordinates();
+                var startCoord = startPositions[i];
                 var targetCoord = positions[i];
                 marker.setCoordinates([
-                    startCoord.x + (targetCoord[0] - startCoord.x) * ease,
-                    startCoord.y + (targetCoord[1] - startCoord.y) * ease
+                    startCoord[0] + (targetCoord[0] - startCoord[0]) * ease,
+                    startCoord[1] + (targetCoord[1] - startCoord[1]) * ease
                 ]);
 
-                var symbol = marker.getSymbol() || {};
-                marker.setSymbol({
-                    ...marker._targetSymbol,
+                marker.setSymbol(Object.assign({}, marker._targetSymbol, {
                     markerOpacity: ease,
                     markerSize: ease
-                });
+                }));
 
                 if (t < 1) {
                     allDone = false;
@@ -298,7 +389,10 @@ var SpiderManager = (function () {
         var self = this;
 
         if (!this.activeCoord || markersToRemove.length === 0) {
-            return;
+            this.activeCoord = null;
+            this._isAnimating = false;
+            this._animationState = null;
+            return this;
         }
 
         var enableAnimation = opts.animation !== false;
@@ -319,18 +413,20 @@ var SpiderManager = (function () {
                 return self._coordKey([startCoord.x, startCoord.y]) !== activeKey;
             });
             for (var i = 0; i < markersToRemove.length; i++) {
-                this.layer.removeGeometry(markersToRemove[i]);
+                this._removeGeometry(markersToRemove[i]);
                 markersToRemove[i].remove();
             }
             for (var j = 0; j < linesToRemove.length; j++) {
-                this.layer.removeGeometry(linesToRemove[j]);
+                this._removeGeometry(linesToRemove[j]);
                 linesToRemove[j].remove();
             }
             if (stackMarker) {
                 stackMarker.show();
             }
             this.activeCoord = null;
-            return;
+            this._isAnimating = false;
+            this._animationState = null;
+            return this;
         }
 
         this._animationState = {
@@ -342,6 +438,10 @@ var SpiderManager = (function () {
 
         var duration = 250;
         var startTime = performance.now();
+        var startPositions = markersToRemove.map(function (marker) {
+            var coord = marker.getCoordinates();
+            return [coord.x, coord.y];
+        });
 
         function animateFrame() {
             if (self._animationState && self._animationState.activeKey !== activeKey) {
@@ -357,15 +457,14 @@ var SpiderManager = (function () {
                 var targetCoord = marker._spiderParentKey
                     ? self._coordKeyToCoord(marker._spiderParentKey)
                     : marker.getCoordinates();
+                var startCoord = startPositions[i];
 
                 if (t < 1) {
-                    var currentCoord = marker.getCoordinates();
                     marker.setCoordinates([
-                        currentCoord.x + (targetCoord[0] - currentCoord.x) * ease,
-                        currentCoord.y + (targetCoord[1] - currentCoord.y) * ease
+                        startCoord[0] + (targetCoord[0] - startCoord[0]) * ease,
+                        startCoord[1] + (targetCoord[1] - startCoord[1]) * ease
                     ]);
 
-                    var symbol = marker.getSymbol() || {};
                     marker.setSymbol({
                         markerOpacity: 1 - ease,
                         markerSize: 1 - ease
@@ -389,13 +488,12 @@ var SpiderManager = (function () {
                     var startCoord = Array.isArray(coords) ? coords[0] : coords;
                     return self._coordKey([startCoord.x, startCoord.y]) !== activeKey;
                 });
-
                 for (var k = 0; k < markersToRemove.length; k++) {
-                    self.layer.removeGeometry(markersToRemove[k]);
+                    self._removeGeometry(markersToRemove[k]);
                     markersToRemove[k].remove();
                 }
                 for (var l = 0; l < linesToRemove.length; l++) {
-                    self.layer.removeGeometry(linesToRemove[l]);
+                    self._removeGeometry(linesToRemove[l]);
                     linesToRemove[l].remove();
                 }
                 if (stackMarker) {
@@ -409,6 +507,7 @@ var SpiderManager = (function () {
 
         this._isAnimating = true;
         requestAnimationFrame(animateFrame);
+        return this;
     };
 
     SpiderManager.prototype._easeInBack = function (t) {
@@ -441,29 +540,34 @@ var SpiderManager = (function () {
     };
 
     SpiderManager.prototype.clear = function () {
-        this.unspiderfy();
+        this.unspiderfy({ animation: false });
 
         var self = this;
         this.stackMarkers.forEach(function (marker) {
-            self.layer.removeGeometry(marker);
+            self._removeGeometry(marker);
+            marker.remove();
         });
         this.stackMarkers.clear();
         this.coordGroups.clear();
         this.idIndex.clear();
+        this.geometryLayers.clear();
+        this.expandedMarkers = [];
+        this.expandedLines = [];
+        this.activeCoord = null;
+        this._isAnimating = false;
+        this._animationState = null;
+        return this;
     };
 
     SpiderManager.prototype.dispose = function () {
         this.clear();
-
-        var self = this;
-        this.stackMarkers.forEach(function (marker) {
-            self.layer.removeGeometry(marker);
-        });
-        this.stackMarkers.clear();
-        this.coordGroups.clear();
-        this.idIndex.clear();
+        if (this.spiderOverlay) {
+            this.spiderOverlay.remove();
+            this.spiderOverlay = null;
+        }
         this.layer = null;
         this.options = {};
+        return this;
     };
 
     SpiderManager.prototype.getMarkerById = function (id) {
@@ -514,9 +618,9 @@ var SpiderManager = (function () {
         this.idIndex.delete(id);
 
         if (this.activeCoord === coordKey) {
-            this.unspiderfy();
+            this.unspiderfy({ animation: false });
             if (group.length > 1) {
-                this.spiderfy(group[0].coord);
+                this.spiderfy(group[0].coord, { animation: false });
             }
         } else if (group.length === 1) {
             var marker = this.stackMarkers.get(coordKey);
@@ -524,7 +628,9 @@ var SpiderManager = (function () {
                 var sym = group[0].symbol || this.options.markerSymbol || this._getDefaultSymbol(false);
                 marker.setSymbol(sym);
                 marker._isSpiderStack = false;
-                marker._spiderGroup = undefined;
+                delete marker._spiderGroup;
+                delete marker._spiderKey;
+                delete marker._spiderCoord;
                 marker._spiderItem = group[0];
             }
         } else {
@@ -539,11 +645,11 @@ var SpiderManager = (function () {
 
     SpiderManager.prototype._removeCoordGroup = function (coordKey) {
         if (this.activeCoord === coordKey) {
-            this.unspiderfy();
+            this.unspiderfy({ animation: false });
         }
         var marker = this.stackMarkers.get(coordKey);
         if (marker) {
-            this.layer.removeGeometry(marker);
+            this._removeGeometry(marker);
             this.stackMarkers.delete(coordKey);
         }
         var group = this.coordGroups.get(coordKey);
@@ -604,7 +710,7 @@ var SpiderManager = (function () {
         }
 
         var marker = new Marker(item.coord, {
-            id: String(item.id),
+            id: item.id != null ? String(item.id) : key,
             symbol: symbol
         });
 
@@ -616,9 +722,14 @@ var SpiderManager = (function () {
         } else {
             marker._spiderItem = item;
         }
+        this._bindMarkerClick(marker);
 
         this.stackMarkers.set(key, marker);
-        this.layer.addGeometry(marker);
+        // Ensure layer type is detected (for setData which doesn't go through constructor)
+        if (this._vtLayerType === null) {
+            this._detectLayerType();
+        }
+        this._addGeometry(marker);
     };
 
     SpiderManager.prototype._convertToStack = function (key, group) {
