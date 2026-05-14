@@ -185,11 +185,9 @@
     // 点击展开后的单个点，显示地图弹窗
     function onSpiderMarkerClick(item, marker) {
       document.getElementById('info').innerHTML = '<b>' + item.name + '</b><br>' + item.desc;
-
       if (!marker || typeof marker.setInfoWindow !== 'function') {
         return;
       }
-
       marker.setInfoWindow({
         title: item.name || '点位详情',
         content: popupContent(item),
@@ -224,7 +222,6 @@
 
     function init() {
       vectorLayer = new maptalks.VectorLayer('markers').addTo(map);
-
       spider = new maptalks.SpiderManager(vectorLayer, {
         spiderRadius: 20,
         spiderLineColor: '#4a8af4',
@@ -421,24 +418,7 @@
 
     // 点击处理
     map.on('click', function(e) {
-      var geos = vectorLayer.identifyAtPoint(e.containerPoint, { tolerance: 0 });
-
-      if (geos && geos.length > 0) {
-        for (var i = 0; i < geos.length; i++) {
-          var geo = geos[i];
-          if (geo._isSpiderStack && geo._spiderCoord) {
-            spider.spiderfy(geo._spiderCoord);
-            return;
-          }
-          if (geo._spiderItem) {
-            onSpiderMarkerClick(geo._spiderItem, geo);
-            return;
-          }
-        }
         spider.unspiderfy();
-      } else {
-        spider.unspiderfy();
-      }
     });
 
     init();

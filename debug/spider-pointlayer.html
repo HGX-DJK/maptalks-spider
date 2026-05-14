@@ -385,39 +385,7 @@
 
     // 点击处理
     map.on('click', function(e) {
-      console.log('Map click at', e.containerPoint);
-
-      // Check both pointLayer (for base data) and spiderOverlay (for spider markers)
-      var geos = pointLayer.identifyAtPoint(e.containerPoint, { tolerance: 10 });
-      console.log('pointLayer geos:', geos);
-
-      // Also check spiderOverlay if it exists (for VT layer spider markers)
-      var overlayGeos = [];
-      if (spider.spiderOverlay) {
-        overlayGeos = spider.spiderOverlay.identifyAtPoint(e.containerPoint, { tolerance: 10 });
-        console.log('spiderOverlay geos:', overlayGeos);
-      }
-
-      // Combine all geos
-      var allGeos = (geos || []).concat(overlayGeos || []);
-
-      if (allGeos.length > 0) {
-        for (var i = 0; i < allGeos.length; i++) {
-          var geo = allGeos[i];
-          console.log('geo type:', geo.getType(), 'props:', geo._isSpiderStack, geo._spiderItem);
-          if (geo._isSpiderStack && geo._spiderCoord) {
-            spider.spiderfy(geo._spiderCoord);
-            return;
-          }
-          if (geo._spiderItem) {
-            onSpiderMarkerClick(geo._spiderItem, geo);
-            return;
-          }
-        }
         spider.unspiderfy();
-      } else {
-        spider.unspiderfy();
-      }
     });
 
     init();
