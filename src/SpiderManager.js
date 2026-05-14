@@ -1,5 +1,5 @@
-// Use maptalks from global scope (loaded via script tag before this plugin)
-// OverlayLayer is the base class for VectorLayer and PointLayer
+import * as maptalks from 'maptalks';
+
 var VectorLayer = maptalks.VectorLayer;
 var Coordinate = maptalks.Coordinate;
 var Point = maptalks.Point;

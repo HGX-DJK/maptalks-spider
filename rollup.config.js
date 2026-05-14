@@ -26,10 +26,11 @@ if (pkg.peerDependencies && pkg.peerDependencies['maptalks']) {
 }
 outro = `typeof console !== 'undefined' && console.log('${outro}');`;
 
-// UMD build - bundle maptalks internally for script tag usage
+// Keep maptalks as a peer dependency. UMD users should load maptalks before this bundle.
 module.exports = [
     {
         input: 'src/SpiderManager.js',
+        external: ['maptalks'],
         plugins: [json()].concat(plugins).concat([
             resolve({ browser: true, preferBuiltins: false }),
             commonjs({ ignoreGlobal: true })
@@ -42,7 +43,10 @@ module.exports = [
             file: outputFile,
             format: 'umd',
             sourcemap: !production,
-            exports: 'named'
+            exports: 'named',
+            globals: {
+                maptalks: 'maptalks'
+            }
         }
     },
     {

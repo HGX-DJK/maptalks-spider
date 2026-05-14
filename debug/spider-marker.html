@@ -2,8 +2,9 @@
 <html>
 <head>
   <meta charset="UTF-8"/>
+  <link rel="stylesheet" href="https://unpkg.com/maptalks-gl/dist/maptalks-gl.css">
   <script type="text/javascript" src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script>
-  <script type="text/javascript" src="../dist/maptalks-spider.js"></script>
+  <script type="text/javascript" src="https://unpkg.com/maptalks-spider@1.0.0/dist/maptalks-spider.js"></script>
   <title>Spider Marker - 蛛网散开效果</title>
   <style>
     * { margin: 0; padding: 0; }
@@ -96,22 +97,7 @@
     td:first-child {
       color: #fff;
     }
-    .popup-card {
-      min-width: 220px;
-      background: #fff;
-      border: 1px solid rgba(17, 24, 39, 0.08);
-      border-radius: 8px;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
-      color: #1f2933;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      padding: 14px 16px;
-    }
-    .popup-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: #111827;
-      margin-bottom: 8px;
-    }
+
     .popup-meta {
       display: flex;
       gap: 6px;
@@ -126,11 +112,11 @@
       font-size: 12px;
       line-height: 1.4;
     }
-    .popup-desc {
+     .popup-desc {
       color: #4b5563;
       font-size: 13px;
       line-height: 1.6;
-      margin-bottom: 10px;
+      margin: 2rem 10px;
     }
     .popup-coord {
       border-top: 1px solid #eef2f7;
@@ -184,7 +170,6 @@
     function popupContent(item) {
       var coord = item.coord || [];
       return '<div class="popup-card">' +
-        '<div class="popup-title">' + (item.name || '未命名点位') + '</div>' +
         '<div class="popup-meta">' +
           '<span class="popup-pill">ID ' + item.id + '</span>' +
           '<span class="popup-pill">展开点位</span>' +

@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8"/>
-  <!-- <script type="text/javascript" src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script> -->
+  <link rel="stylesheet" href="https://unpkg.com/maptalks-gl/dist/maptalks-gl.css">
   <script type="text/javascript" src="https://unpkg.com/maptalks-gl/dist/maptalks-gl.js"></script>
   <script type="text/javascript" src="../dist/maptalks-spider.js"></script>
   <title>Spider Marker - PointLayer 测试</title>
@@ -105,28 +105,8 @@
     td:first-child {
       color: #fff;
     }
-    .popup-card {
-      min-width: 220px;
-      background: #fff;
-      border: 1px solid rgba(17, 24, 39, 0.08);
-      border-radius: 8px;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
-      color: #1f2933;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      padding: 14px 16px;
-    }
-    .popup-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: #111827;
-      margin-bottom: 8px;
-    }
-    .popup-meta {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-    }
+
+
     .popup-pill {
       background: #e8f2ff;
       color: #1769aa;
@@ -139,7 +119,7 @@
       color: #4b5563;
       font-size: 13px;
       line-height: 1.6;
-      margin-bottom: 10px;
+      margin: 2rem 10px;
     }
     .popup-coord {
       border-top: 1px solid #eef2f7;
@@ -193,7 +173,6 @@
     function popupContent(item) {
       var coord = item.coord || [];
       return '<div class="popup-card">' +
-        '<div class="popup-title">' + (item.name || '未命名点位') + '</div>' +
         '<div class="popup-meta">' +
           '<span class="popup-pill">ID ' + item.id + '</span>' +
           '<span class="popup-pill">展开点位</span>' +
@@ -208,10 +187,10 @@
 
     // 点击展开后的单个点，显示地图弹窗
     function onSpiderMarkerClick(item, marker) {
-      document.getElementById('info').innerHTML = '<b>' + item.name + '</b><br>' + item.desc;
+      // document.getElementById('info').innerHTML = '<b>' + item.name + '</b><br>' + item.desc;
 
       if (!marker || typeof marker.setInfoWindow !== 'function') {
-        return;
+            return;
       }
 
       marker.setInfoWindow({
