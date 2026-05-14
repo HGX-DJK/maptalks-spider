@@ -375,11 +375,10 @@
     function testReAdd() {
       if (!pointLayer || !pointLayer.getMap()) {
         init();
-        log('重新初始化完成');
       } else {
         spider.clear();
+        testRemoveLayer();
         init();
-        log('数据已重新加载');
       }
     }
 
