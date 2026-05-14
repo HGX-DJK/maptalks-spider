@@ -105,6 +105,49 @@
     td:first-child {
       color: #fff;
     }
+    .popup-card {
+      min-width: 220px;
+      background: #fff;
+      border: 1px solid rgba(17, 24, 39, 0.08);
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+      color: #1f2933;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 14px 16px;
+    }
+    .popup-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+    .popup-meta {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .popup-pill {
+      background: #e8f2ff;
+      color: #1769aa;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .popup-desc {
+      color: #4b5563;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+    .popup-coord {
+      border-top: 1px solid #eef2f7;
+      color: #6b7280;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      padding-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -147,9 +190,38 @@
 
     var pointLayer, spider;
 
-    // 点击回调函数
-    function onSpiderMarkerClick(item) {
+    function popupContent(item) {
+      var coord = item.coord || [];
+      return '<div class="popup-card">' +
+        '<div class="popup-title">' + (item.name || '未命名点位') + '</div>' +
+        '<div class="popup-meta">' +
+          '<span class="popup-pill">ID ' + item.id + '</span>' +
+          '<span class="popup-pill">展开点位</span>' +
+        '</div>' +
+        '<div class="popup-desc">' + (item.desc || '暂无描述') + '</div>' +
+        '<div class="popup-coord">' +
+          'Lng ' + (coord[0] != null ? coord[0].toFixed(6) : '-') +
+          ' / Lat ' + (coord[1] != null ? coord[1].toFixed(6) : '-') +
+        '</div>' +
+        '</div>';
+    }
+
+    // 点击展开后的单个点，显示地图弹窗
+    function onSpiderMarkerClick(item, marker) {
       document.getElementById('info').innerHTML = '<b>' + item.name + '</b><br>' + item.desc;
+
+      if (!marker || typeof marker.setInfoWindow !== 'function') {
+        return;
+      }
+
+      marker.setInfoWindow({
+        title: item.name || '点位详情',
+        content: popupContent(item),
+        width: 260,
+        autoOpenOn: false,
+        autoCloseOn: false
+      });
+      marker.openInfoWindow();
     }
 
     // 日志输出
@@ -190,7 +262,8 @@
           markerFile: './aoi.png',
           markerWidth: 48,
           markerHeight: 48
-        }
+        },
+        onSpiderMarkerClick: onSpiderMarkerClick
       });
 
       var names = ['星巴克', '瑞幸', '太平洋', '麦咖啡', '库迪', '奈茶', '喜茶', '乐乐茶', '贡茶', 'CoCo都可',
@@ -206,9 +279,6 @@
       spider.addMarker([121.510, 31.248], { id: 22, name: '呷哺', desc: '小火锅' });
 
       log('PointLayer 初始化完成，共 22 个标记');
-      log('stackMarker count: ' + spider.stackMarkers.size);
-      log('spiderOverlay: ' + (spider.spiderOverlay ? spider.spiderOverlay.getType() : 'null'));
-      log('_vtLayerType: ' + spider._vtLayerType);
     }
 
     // 添加 10000 个随机分布的点
@@ -361,7 +431,7 @@
             return;
           }
           if (geo._spiderItem) {
-            onSpiderMarkerClick(geo._spiderItem);
+            onSpiderMarkerClick(geo._spiderItem, geo);
             return;
           }
         }
