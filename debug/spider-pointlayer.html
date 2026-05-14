@@ -179,23 +179,17 @@
       pointLayer = new maptalks.PointLayer('markers').addTo(map);
 
       spider = new maptalks.SpiderManager(pointLayer, {
-        spiderRadius: 40,
-        spiderLineColor: '#2196F3',
+        spiderRadius: 20,
+        spiderLineColor: '#4a8af4',
         markerSymbol: {
-          markerType: 'ellipse',
-          markerWidth: 20,
-          markerHeight: 20,
-          markerFill: '#4CAF50',
-          markerLineColor: '#fff',
-          markerLineWidth: 2
+          markerFile: './start.png',
+          markerWidth: 32,
+          markerHeight: 32
         },
         stackSymbol: {
-          markerType: 'ellipse',
-          markerWidth: 32,
-          markerHeight: 32,
-          markerFill: '#FF5722',
-          markerLineColor: '#fff',
-          markerLineWidth: 2
+          markerFile: './aoi.png',
+          markerWidth: 48,
+          markerHeight: 48
         }
       });
 
@@ -212,7 +206,6 @@
       spider.addMarker([121.510, 31.248], { id: 22, name: '呷哺', desc: '小火锅' });
 
       log('PointLayer 初始化完成，共 22 个标记');
-      log('layer type: ' + pointLayer.getType());
       log('stackMarker count: ' + spider.stackMarkers.size);
       log('spiderOverlay: ' + (spider.spiderOverlay ? spider.spiderOverlay.getType() : 'null'));
       log('_vtLayerType: ' + spider._vtLayerType);
