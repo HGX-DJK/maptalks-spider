@@ -15,6 +15,8 @@ export var SpiderMarkerItem = {
 export var SpiderOptions = {
     spiderRadius: 60,
     spiderLineColor: '#DE3333',
+    spiderLineWidth: 2,
+    spiderLineOpacity: 0.6,
     markerSymbol: null,
     stackSymbol: null,
     onSpiderMarkerClick: null,
@@ -44,6 +46,8 @@ var SpiderManager = (function () {
         this.options = {
             spiderRadius: opts.spiderRadius !== undefined ? opts.spiderRadius : 60,
             spiderLineColor: opts.spiderLineColor !== undefined ? opts.spiderLineColor : '#DE3333',
+            spiderLineWidth: opts.spiderLineWidth !== undefined ? opts.spiderLineWidth : 2,
+            spiderLineOpacity: opts.spiderLineOpacity !== undefined ? opts.spiderLineOpacity : 0.6,
             markerSymbol: opts.markerSymbol !== undefined ? opts.markerSymbol : null,
             stackSymbol: opts.stackSymbol !== undefined ? opts.stackSymbol : null,
             onSpiderMarkerClick: opts.onSpiderMarkerClick !== undefined ? opts.onSpiderMarkerClick : null,
@@ -263,9 +267,11 @@ var SpiderManager = (function () {
         }
 
         var spiderRadius = this.options.spiderRadius !== undefined ? this.options.spiderRadius : 60;
-        var spiderLineColor = this.options.spiderLineColor !== undefined ? this.options.spiderLineColor : '#DE3333';
-        var spiderMode = opts.spiderMode !== undefined ? opts.spiderMode : (this.options.spiderMode || 'spiral');
-        var spiderSpread = opts.spiderSpread !== undefined ? opts.spiderSpread : (this.options.spiderSpread || 1);
+        var spiderLineColor = opts.spiderLineColor !== undefined ? opts.spiderLineColor : (this.options.spiderLineColor !== undefined ? this.options.spiderLineColor : '#DE3333');
+        var spiderLineWidth = opts.spiderLineWidth !== undefined ? opts.spiderLineWidth : (this.options.spiderLineWidth !== undefined ? this.options.spiderLineWidth : 2);
+        var spiderLineOpacity = opts.spiderLineOpacity !== undefined ? opts.spiderLineOpacity : (this.options.spiderLineOpacity !== undefined ? this.options.spiderLineOpacity : 0.6);
+        var spiderMode = opts.spiderMode !== undefined ? opts.spiderMode : (this.options.spiderMode !== undefined ? this.options.spiderMode : 'spiral');
+        var spiderSpread = opts.spiderSpread !== undefined ? opts.spiderSpread : (this.options.spiderSpread !== undefined ? this.options.spiderSpread : 1);
         var positions = this._getSpiderPositions(coord, group.length, spiderRadius, spiderMode, spiderSpread);
         var enableAnimation = opts.animation !== false;
 
@@ -273,7 +279,7 @@ var SpiderManager = (function () {
             var line = new LineString([coord, positions[k]], {
                 symbol: {
                     lineColor: spiderLineColor,
-                    lineWidth: 2,
+                    lineWidth: spiderLineWidth,
                     lineOpacity: 0
                 }
             });
@@ -281,13 +287,13 @@ var SpiderManager = (function () {
             this._addGeometry(line);
             if (enableAnimation) {
                 line.animate({
-                    symbol: { lineOpacity: 0.6 }
+                    symbol: { lineOpacity: spiderLineOpacity }
                 }, {
                     duration: opts.animationDuration || this.options.animationDuration || 400,
                     easing: 'out'
                 });
             } else {
-                line.setSymbol({ lineOpacity: 0.6 });
+                line.setSymbol({ lineOpacity: spiderLineOpacity });
             }
         }
 
@@ -306,8 +312,6 @@ var SpiderManager = (function () {
             });
             marker._spiderItem = item;
             marker._spiderParentKey = key;
-            marker._isSpiderExpanded = true;
-            marker._targetPosition = positions[l];
             marker._targetSymbol = itemSymbol;
             this._bindMarkerClick(marker);
 
@@ -338,8 +342,8 @@ var SpiderManager = (function () {
         return this;
     };
 
-    SpiderManager.prototype._animateExpand = function (markers, positions, duration) {
-        var duration = duration || this.options.animationDuration || 400;
+    SpiderManager.prototype._animateExpand = function (markers, positions, durationParam) {
+        var duration = durationParam !== undefined ? durationParam : (this.options.animationDuration || 400);
         var startTime = performance.now();
         var delayStep = 30;
         var self = this;
@@ -441,7 +445,8 @@ var SpiderManager = (function () {
             activeKey: activeKey,
             stackMarker: stackMarker,
             markersToRemove: markersToRemove,
-            linesToRemove: linesToRemove
+            linesToRemove: linesToRemove,
+            spiderLineOpacity: this.options.spiderLineOpacity !== undefined ? this.options.spiderLineOpacity : 0.6
         };
 
         var duration = opts.animationDuration !== undefined ? opts.animationDuration : (this.options.animationDuration || 400);
@@ -482,8 +487,9 @@ var SpiderManager = (function () {
 
             for (var j = 0; j < linesToRemove.length; j++) {
                 var line = linesToRemove[j];
+                var lineOpacity = self._animationState ? self._animationState.spiderLineOpacity : 0.6;
                 line.setSymbol({
-                    lineOpacity: 0.6 * (1 - t)
+                    lineOpacity: lineOpacity * (1 - t)
                 });
             }
 
@@ -675,6 +681,8 @@ var SpiderManager = (function () {
         this.options = {
             spiderRadius: options.spiderRadius !== undefined ? options.spiderRadius : this.options.spiderRadius,
             spiderLineColor: options.spiderLineColor !== undefined ? options.spiderLineColor : this.options.spiderLineColor,
+            spiderLineWidth: options.spiderLineWidth !== undefined ? options.spiderLineWidth : this.options.spiderLineWidth,
+            spiderLineOpacity: options.spiderLineOpacity !== undefined ? options.spiderLineOpacity : this.options.spiderLineOpacity,
             markerSymbol: options.markerSymbol !== undefined ? options.markerSymbol : this.options.markerSymbol,
             stackSymbol: options.stackSymbol !== undefined ? options.stackSymbol : this.options.stackSymbol,
             onSpiderMarkerClick: options.onSpiderMarkerClick !== undefined ? options.onSpiderMarkerClick : this.options.onSpiderMarkerClick,
@@ -689,6 +697,8 @@ var SpiderManager = (function () {
         return {
             spiderRadius: this.options.spiderRadius,
             spiderLineColor: this.options.spiderLineColor,
+            spiderLineWidth: this.options.spiderLineWidth,
+            spiderLineOpacity: this.options.spiderLineOpacity,
             markerSymbol: this.options.markerSymbol,
             stackSymbol: this.options.stackSymbol,
             onSpiderMarkerClick: this.options.onSpiderMarkerClick,
