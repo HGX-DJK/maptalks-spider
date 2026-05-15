@@ -263,7 +263,7 @@ var SpiderManager = (function () {
         var spiderRadius = this.options.spiderRadius !== undefined ? this.options.spiderRadius : 60;
         var spiderLineColor = this.options.spiderLineColor !== undefined ? this.options.spiderLineColor : '#DE3333';
         var spiderMode = opts.spiderMode !== undefined ? opts.spiderMode : (this.options.spiderMode || 'spiral');
-        var spiderSpread = opts.spread !== undefined ? opts.spread : (this.options.spiderSpread || 1);
+        var spiderSpread = opts.spiderSpread !== undefined ? opts.spiderSpread : (this.options.spiderSpread || 1);
         var positions = this._getSpiderPositions(coord, group.length, spiderRadius, spiderMode, spiderSpread);
         var enableAnimation = opts.animation !== false;
 
