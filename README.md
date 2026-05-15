@@ -139,6 +139,7 @@ const spider = new SpiderManager(layer, {
   spiderLineColor: '#DE3333', // 连线颜色
   spiderMode: 'spiral',     // 散开方式
   spiderSpread: 1,         // 散开间距倍数
+  animationDuration: 400,  // 动画时长（毫秒）
   markerSymbol: null,      // 展开后标记的默认样式
   stackSymbol: null,       // 堆叠状态标记的样式
   onSpiderMarkerClick: null // 点击展开标记的回调
@@ -151,6 +152,7 @@ const spider = new SpiderManager(layer, {
 | `spiderLineColor` | `#DE3333` | 中心点到标记的连线颜色 |
 | `spiderMode` | `spiral` | 散开方式，见下方模式列表 |
 | `spiderSpread` | `1` | 散开间距倍数，值越大点之间越稀疏 |
+| `animationDuration` | `400` | 展开/收起动画时长（毫秒） |
 | `markerSymbol` | `null` | 展开后标记的默认 symbol |
 | `stackSymbol` | `null` | 堆叠状态标记的 symbol |
 | `onSpiderMarkerClick` | `null` | 点击展开标记时触发 `(item, marker, event) => {}` |
@@ -170,14 +172,15 @@ const spider = new SpiderManager(layer, {
 // 构造函数设置默认模式
 const spider = new SpiderManager(layer, {
   spiderMode: 'circle',
-  spiderSpread: 1.5
+  spiderSpread: 1.5,
+  animationDuration: 600
 });
 
 // 单独展开时指定
-spider.spiderfy([lng, lat], { spiderMode: 'fan', spread: 2 });
+spider.spiderfy([lng, lat], { spiderMode: 'fan', spread: 2, animationDuration: 800 });
 
 // 动态修改
-spider.setOptions({ spiderMode: 'grid', spiderSpread: 1.2 });
+spider.setOptions({ spiderMode: 'grid', spiderSpread: 1.2, animationDuration: 500 });
 ```
 
 ## API

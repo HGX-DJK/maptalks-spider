@@ -19,7 +19,8 @@ export var SpiderOptions = {
     stackSymbol: null,
     onSpiderMarkerClick: null,
     spiderMode: 'spiral',
-    spiderSpread: 1
+    spiderSpread: 1,
+    animationDuration: 400
 };
 
 var SpiderManager = (function () {
@@ -47,7 +48,8 @@ var SpiderManager = (function () {
             stackSymbol: opts.stackSymbol !== undefined ? opts.stackSymbol : null,
             onSpiderMarkerClick: opts.onSpiderMarkerClick !== undefined ? opts.onSpiderMarkerClick : null,
             spiderMode: opts.spiderMode !== undefined ? opts.spiderMode : 'spiral',
-            spiderSpread: opts.spiderSpread !== undefined ? opts.spiderSpread : 1
+            spiderSpread: opts.spiderSpread !== undefined ? opts.spiderSpread : 1,
+            animationDuration: opts.animationDuration !== undefined ? opts.animationDuration : 400
         };
 
         // Detect if this is a VT layer (PointLayer, LineStringLayer) that needs an overlay for Marker geometries.
@@ -281,7 +283,7 @@ var SpiderManager = (function () {
                 line.animate({
                     symbol: { lineOpacity: 0.6 }
                 }, {
-                    duration: 300,
+                    duration: opts.animationDuration || this.options.animationDuration || 400,
                     easing: 'out'
                 });
             } else {
@@ -321,7 +323,7 @@ var SpiderManager = (function () {
 
         if (enableAnimation) {
             this._isAnimating = true;
-            this._animateExpand(newMarkers, positions);
+            this._animateExpand(newMarkers, positions, opts.animationDuration);
         } else {
             for (var m = 0; m < newMarkers.length; m++) {
                 var mk = newMarkers[m];
@@ -336,8 +338,8 @@ var SpiderManager = (function () {
         return this;
     };
 
-    SpiderManager.prototype._animateExpand = function (markers, positions) {
-        var duration = 400;
+    SpiderManager.prototype._animateExpand = function (markers, positions, duration) {
+        var duration = duration || this.options.animationDuration || 400;
         var startTime = performance.now();
         var delayStep = 30;
         var self = this;
@@ -442,7 +444,7 @@ var SpiderManager = (function () {
             linesToRemove: linesToRemove
         };
 
-        var duration = 250;
+        var duration = opts.animationDuration !== undefined ? opts.animationDuration : (this.options.animationDuration || 400);
         var startTime = performance.now();
         var startPositions = markersToRemove.map(function (marker) {
             var coord = marker.getCoordinates();
@@ -677,7 +679,8 @@ var SpiderManager = (function () {
             stackSymbol: options.stackSymbol !== undefined ? options.stackSymbol : this.options.stackSymbol,
             onSpiderMarkerClick: options.onSpiderMarkerClick !== undefined ? options.onSpiderMarkerClick : this.options.onSpiderMarkerClick,
             spiderMode: options.spiderMode !== undefined ? options.spiderMode : this.options.spiderMode,
-            spiderSpread: options.spiderSpread !== undefined ? options.spiderSpread : this.options.spiderSpread
+            spiderSpread: options.spiderSpread !== undefined ? options.spiderSpread : this.options.spiderSpread,
+            animationDuration: options.animationDuration !== undefined ? options.animationDuration : this.options.animationDuration
         };
         return this;
     };
@@ -690,7 +693,8 @@ var SpiderManager = (function () {
             stackSymbol: this.options.stackSymbol,
             onSpiderMarkerClick: this.options.onSpiderMarkerClick,
             spiderMode: this.options.spiderMode,
-            spiderSpread: this.options.spiderSpread
+            spiderSpread: this.options.spiderSpread,
+            animationDuration: this.options.animationDuration
         };
     };
 
