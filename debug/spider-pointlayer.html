@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <link rel="stylesheet" href="https://unpkg.com/maptalks-gl/dist/maptalks-gl.css">
   <script type="text/javascript" src="https://unpkg.com/maptalks-gl/dist/maptalks-gl.js"></script>
-  <script type="text/javascript" src="../dist/maptalks-spider.js"></script>
+  <script type="text/javascript" src="https://unpkg.com/maptalks-spider/dist/maptalks-spider.js"></script>
   <title>Spider Marker - PointLayer 测试</title>
   <style>
     * { margin: 0; padding: 0; }
@@ -186,9 +186,10 @@
     }
 
     // 点击展开后的单个点，显示地图弹窗
-    function onSpiderMarkerClick(item, marker) {
+    function onSpiderMarkerClick(item, marker,event) {
+      debugger
       // document.getElementById('info').innerHTML = '<b>' + item.name + '</b><br>' + item.desc;
-
+      console.log(event,"qqqqqqqqq")
       if (!marker || typeof marker.setInfoWindow !== 'function') {
             return;
       }
@@ -233,10 +234,10 @@
       spider = new maptalks.SpiderManager(pointLayer, {
         spiderRadius: 140,
         spiderLineColor: '#4a8af4',
-        spiderMode: 'fan',  // 新参数
-        spiderSpread: 1.5,  // 间距倍数
-        spiderLineWidth: 2,        // 连线宽度
-        spiderLineOpacity: 0.6,    // 连线透明度
+        spiderMode: 'grid',      // 新参数
+        spiderSpread: 1.5,       // 间距倍数
+        spiderLineWidth: 6,      // 连线宽度
+        spiderLineOpacity: 0.6,  // 连线透明度
         animationDuration: 100,  // 动画时长（毫秒）
         markerSymbol: {
           markerFile: './start.png',

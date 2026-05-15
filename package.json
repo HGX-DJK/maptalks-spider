@@ -1,6 +1,6 @@
 {
   "name": "maptalks-spider",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A spider expansion manager for maptalks - handles overlapping markers with spiral expansion",
   "license": "MIT",
   "repository": {

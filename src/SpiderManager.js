@@ -304,7 +304,7 @@ var SpiderManager = (function () {
             var item = group[l];
             var itemSymbol = item.symbol || defaultSymbol;
             var marker = new Marker(coord, {
-                id: 'spider_' + item.id,
+                id: item.id != null ? 'spider_' + item.id : 'spider_' + key + '_' + l,
                 symbol: {
                     markerOpacity: 0,
                     markerSize: 0
