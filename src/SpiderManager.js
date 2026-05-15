@@ -17,7 +17,9 @@ export var SpiderOptions = {
     spiderLineColor: '#DE3333',
     markerSymbol: null,
     stackSymbol: null,
-    onSpiderMarkerClick: null
+    onSpiderMarkerClick: null,
+    spiderMode: 'spiral',
+    spiderSpread: 1
 };
 
 var SpiderManager = (function () {
@@ -43,7 +45,9 @@ var SpiderManager = (function () {
             spiderLineColor: opts.spiderLineColor !== undefined ? opts.spiderLineColor : '#DE3333',
             markerSymbol: opts.markerSymbol !== undefined ? opts.markerSymbol : null,
             stackSymbol: opts.stackSymbol !== undefined ? opts.stackSymbol : null,
-            onSpiderMarkerClick: opts.onSpiderMarkerClick !== undefined ? opts.onSpiderMarkerClick : null
+            onSpiderMarkerClick: opts.onSpiderMarkerClick !== undefined ? opts.onSpiderMarkerClick : null,
+            spiderMode: opts.spiderMode !== undefined ? opts.spiderMode : 'spiral',
+            spiderSpread: opts.spiderSpread !== undefined ? opts.spiderSpread : 1
         };
 
         // Detect if this is a VT layer (PointLayer, LineStringLayer) that needs an overlay for Marker geometries.
@@ -258,7 +262,9 @@ var SpiderManager = (function () {
 
         var spiderRadius = this.options.spiderRadius !== undefined ? this.options.spiderRadius : 60;
         var spiderLineColor = this.options.spiderLineColor !== undefined ? this.options.spiderLineColor : '#DE3333';
-        var positions = this._getSpiderPositions(coord, group.length, spiderRadius);
+        var spiderMode = opts.spiderMode !== undefined ? opts.spiderMode : (this.options.spiderMode || 'spiral');
+        var spiderSpread = opts.spread !== undefined ? opts.spread : (this.options.spiderSpread || 1);
+        var positions = this._getSpiderPositions(coord, group.length, spiderRadius, spiderMode, spiderSpread);
         var enableAnimation = opts.animation !== false;
 
         for (var k = 0; k < group.length; k++) {
@@ -669,7 +675,9 @@ var SpiderManager = (function () {
             spiderLineColor: options.spiderLineColor !== undefined ? options.spiderLineColor : this.options.spiderLineColor,
             markerSymbol: options.markerSymbol !== undefined ? options.markerSymbol : this.options.markerSymbol,
             stackSymbol: options.stackSymbol !== undefined ? options.stackSymbol : this.options.stackSymbol,
-            onSpiderMarkerClick: options.onSpiderMarkerClick !== undefined ? options.onSpiderMarkerClick : this.options.onSpiderMarkerClick
+            onSpiderMarkerClick: options.onSpiderMarkerClick !== undefined ? options.onSpiderMarkerClick : this.options.onSpiderMarkerClick,
+            spiderMode: options.spiderMode !== undefined ? options.spiderMode : this.options.spiderMode,
+            spiderSpread: options.spiderSpread !== undefined ? options.spiderSpread : this.options.spiderSpread
         };
         return this;
     };
@@ -680,7 +688,9 @@ var SpiderManager = (function () {
             spiderLineColor: this.options.spiderLineColor,
             markerSymbol: this.options.markerSymbol,
             stackSymbol: this.options.stackSymbol,
-            onSpiderMarkerClick: this.options.onSpiderMarkerClick
+            onSpiderMarkerClick: this.options.onSpiderMarkerClick,
+            spiderMode: this.options.spiderMode,
+            spiderSpread: this.options.spiderSpread
         };
     };
 
@@ -748,7 +758,7 @@ var SpiderManager = (function () {
         delete marker._spiderItem;
     };
 
-    SpiderManager.prototype._getSpiderPositions = function (center, count, radius) {
+    SpiderManager.prototype._getSpiderPositions = function (center, count, radius, mode, spread) {
         if (count === 1) return [center];
 
         var map = this.layer.getMap();
@@ -756,17 +766,78 @@ var SpiderManager = (function () {
 
         var centerCoord = new Coordinate(center[0], center[1]);
         var centerPoint = map.coordToContainerPoint(centerCoord);
-        var goldenAngle = 37.5;
-        var angleStepRad = goldenAngle * Math.PI / 180;
+        var spiderMode = mode || 'spiral';
+        var spiderSpread = spread || 1;
 
         var positions = new Array(count);
-        for (var i = 0; i < count; i++) {
-            var r = radius * (0.3 + i * 0.15);
-            var angle = i * angleStepRad;
-            var px = centerPoint.x + r * Math.cos(angle);
-            var py = centerPoint.y + r * Math.sin(angle);
-            var coord = map.containerPointToCoord(new Point(px, py));
-            positions[i] = [coord.x, coord.y];
+
+        if (spiderMode === 'circle') {
+            for (var i = 0; i < count; i++) {
+                var angle = (2 * Math.PI * i) / count - Math.PI / 2;
+                var px = centerPoint.x + radius * spiderSpread * Math.cos(angle);
+                var py = centerPoint.y + radius * spiderSpread * Math.sin(angle);
+                var coord = map.containerPointToCoord(new Point(px, py));
+                positions[i] = [coord.x, coord.y];
+            }
+        } else if (spiderMode === 'grid') {
+            var cols = Math.ceil(Math.sqrt(count));
+            var rows = Math.ceil(count / cols);
+            var cellSize = radius * 2 / (cols + 1);
+            for (var i = 0; i < count; i++) {
+                var col = i % cols;
+                var row = Math.floor(i / cols);
+                var px = centerPoint.x + (col - (cols - 1) / 2) * cellSize * spiderSpread;
+                var py = centerPoint.y + (row - (rows - 1) / 2) * cellSize * spiderSpread;
+                var coord = map.containerPointToCoord(new Point(px, py));
+                positions[i] = [coord.x, coord.y];
+            }
+        } else if (spiderMode === 'line') {
+            for (var i = 0; i < count; i++) {
+                var offset = (i - (count - 1) / 2) * (radius * 2 / count) * spiderSpread;
+                var px = centerPoint.x + offset;
+                var py = centerPoint.y;
+                var coord = map.containerPointToCoord(new Point(px, py));
+                positions[i] = [coord.x, coord.y];
+            }
+        } else if (spiderMode === 'fan') {
+            var totalAngle = Math.PI * 2 / 3;
+            var startAngle = -Math.PI / 2 - totalAngle / 2;
+            for (var i = 0; i < count; i++) {
+                var angle = startAngle + (totalAngle * i) / Math.max(1, count - 1);
+                var px = centerPoint.x + radius * spiderSpread * Math.cos(angle);
+                var py = centerPoint.y + radius * spiderSpread * Math.sin(angle);
+                var coord = map.containerPointToCoord(new Point(px, py));
+                positions[i] = [coord.x, coord.y];
+            }
+        } else if (spiderMode === 'diamond') {
+            var rings = Math.ceil(count / 4);
+            var index = 0;
+            for (var r = 1; r <= rings && index < count; r++) {
+                var size = radius * r / rings * spiderSpread;
+                var perimeter = 4;
+                for (var j = 0; j < perimeter && index < count; j++) {
+                    var angle = Math.PI / 4 + (Math.PI / 2) * j;
+                    var px = centerPoint.x + size * Math.cos(angle);
+                    var py = centerPoint.y + size * Math.sin(angle);
+                    var coord = map.containerPointToCoord(new Point(px, py));
+                    positions[index] = [coord.x, coord.y];
+                    index++;
+                }
+            }
+            for (var i = index; i < count; i++) {
+                positions[i] = [center[0], center[1]];
+            }
+        } else {
+            var goldenAngle = 37.5;
+            var angleStepRad = goldenAngle * Math.PI / 180;
+            for (var i = 0; i < count; i++) {
+                var r = radius * (0.3 + i * 0.15) * spiderSpread;
+                var angle = i * angleStepRad;
+                var px = centerPoint.x + r * Math.cos(angle);
+                var py = centerPoint.y + r * Math.sin(angle);
+                var coord = map.containerPointToCoord(new Point(px, py));
+                positions[i] = [coord.x, coord.y];
+            }
         }
 
         return positions;

@@ -34,6 +34,8 @@ npm install maptalks-gl
   const spider = new maptalks.SpiderManager(layer, {
     spiderRadius: 40,
     spiderLineColor: '#4a8af4',
+    spiderMode: 'circle',
+    spiderSpread: 1.2,
     stackSymbol: {
       markerType: 'ellipse',
       markerWidth: 36,
@@ -75,6 +77,8 @@ const layer = new maptalks.VectorLayer('markers').addTo(map);
 const spider = new SpiderManager(layer, {
   spiderRadius: 40,
   spiderLineColor: '#4a8af4',
+  spiderMode: 'grid',
+  spiderSpread: 1.5,
   onSpiderMarkerClick(item, marker) {
     console.log('点击了:', item.name);
   }
@@ -133,6 +137,8 @@ spider.spiderOverlay;
 const spider = new SpiderManager(layer, {
   spiderRadius: 60,        // 展开半径（像素）
   spiderLineColor: '#DE3333', // 连线颜色
+  spiderMode: 'spiral',     // 散开方式
+  spiderSpread: 1,         // 散开间距倍数
   markerSymbol: null,      // 展开后标记的默认样式
   stackSymbol: null,       // 堆叠状态标记的样式
   onSpiderMarkerClick: null // 点击展开标记的回调
@@ -143,9 +149,36 @@ const spider = new SpiderManager(layer, {
 |------|--------|------|
 | `spiderRadius` | `60` | 螺旋展开半径 |
 | `spiderLineColor` | `#DE3333` | 中心点到标记的连线颜色 |
+| `spiderMode` | `spiral` | 散开方式，见下方模式列表 |
+| `spiderSpread` | `1` | 散开间距倍数，值越大点之间越稀疏 |
 | `markerSymbol` | `null` | 展开后标记的默认 symbol |
 | `stackSymbol` | `null` | 堆叠状态标记的 symbol |
 | `onSpiderMarkerClick` | `null` | 点击展开标记时触发 `(item, marker, event) => {}` |
+
+### 散开方式 (spiderMode)
+
+| 模式 | 说明 |
+|------|------|
+| `spiral` | 黄金角度螺旋散开（默认） |
+| `circle` | 圆形排列，所有标记均匀分布在圆周上 |
+| `grid` | 网格排列，近似正方形网格布局 |
+| `line` | 水平直线排列，从中心向两侧扩散 |
+| `fan` | 扇形展开，120度范围内均匀分布 |
+| `diamond` | 菱形环绕，从内向外层层扩散 |
+
+```js
+// 构造函数设置默认模式
+const spider = new SpiderManager(layer, {
+  spiderMode: 'circle',
+  spiderSpread: 1.5
+});
+
+// 单独展开时指定
+spider.spiderfy([lng, lat], { spiderMode: 'fan', spread: 2 });
+
+// 动态修改
+spider.setOptions({ spiderMode: 'grid', spiderSpread: 1.2 });
+```
 
 ## API
 

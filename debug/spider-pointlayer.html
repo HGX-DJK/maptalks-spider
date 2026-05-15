@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <link rel="stylesheet" href="https://unpkg.com/maptalks-gl/dist/maptalks-gl.css">
   <script type="text/javascript" src="https://unpkg.com/maptalks-gl/dist/maptalks-gl.js"></script>
-  <script type="text/javascript" src="https://unpkg.com/maptalks-spider/dist/maptalks-spider.js"></script>
+  <script type="text/javascript" src="../dist/maptalks-spider.js"></script>
   <title>Spider Marker - PointLayer 测试</title>
   <style>
     * { margin: 0; padding: 0; }
@@ -217,7 +217,8 @@
     // 初始化地图
     var map = new maptalks.Map('map', {
       center: [121.507, 31.247],
-      zoom: 16
+      zoom: 16,
+      maxZoom:18
     });
 
     map.setBaseLayer(new maptalks.TileLayer('gaode', {
@@ -230,8 +231,10 @@
       pointLayer = new maptalks.PointLayer('markers').addTo(map);
 
       spider = new maptalks.SpiderManager(pointLayer, {
-        spiderRadius: 20,
+        spiderRadius: 140,
         spiderLineColor: '#4a8af4',
+        spiderMode: 'grid',  // 新参数
+        spiderSpread: 1.5,  // 间距倍数
         markerSymbol: {
           markerFile: './start.png',
           markerWidth: 32,
