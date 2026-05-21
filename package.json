@@ -1,15 +1,15 @@
 {
-  "name": "maptalks-spider",
-  "version": "1.0.6",
+  "name": "giser-maptalks-spider",
+  "version": "1.0.0",
   "description": "A spider expansion manager for maptalks - handles overlapping markers with spiral expansion",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": ""
   },
-  "main": "dist/maptalks-spider.js",
-  "module": "dist/maptalks-spider.es.js",
-  "jsnext:main": "dist/maptalks-spider.es.js",
+  "main": "dist/giser-maptalks-spider.js",
+  "module": "dist/giser-maptalks-spider.es.js",
+  "jsnext:main": "dist/giser-maptalks-spider.es.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "dev": "rollup -w -c rollup.config.js",

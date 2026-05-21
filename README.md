@@ -1,11 +1,11 @@
-# maptalks-spider
+# giser-maptalks-spider
 
 处理地图上同坐标重叠点的展开/收起动画。当多个标记落在同一位置时，显示一个堆叠标记；点击后螺旋散开显示全部，并绘制中心点到展开点的连线。
 
 ## 安装
 
 ```bash
-npm install maptalks maptalks-spider
+npm install maptalks giser-maptalks-spider
 ```
 
 如需使用 `PointLayer`（配合 maptalks-gl），需额外安装：
@@ -22,7 +22,7 @@ npm install maptalks-gl
 <div id="map" style="width: 100%; height: 100vh;"></div>
 
 <script src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script>
-<script src="https://unpkg.com/maptalks-spider/dist/maptalks-spider.js"></script>
+<script src="https://unpkg.com/giser-maptalks-spider/dist/giser-maptalks-spider.js"></script>
 <script>
   const map = new maptalks.Map('map', {
     center: [121.507, 31.247],
@@ -65,7 +65,7 @@ npm install maptalks-gl
 
 ```js
 import * as maptalks from 'maptalks';
-import { SpiderManager } from 'maptalks-spider';
+import { SpiderManager } from 'giser-maptalks-spider';
 
 const map = new maptalks.Map('map', {
   center: [121.507, 31.247],
@@ -268,11 +268,11 @@ npm run build-dev
 
 **Q: 报 `LineString can't be added to PointLayer` 错误**
 
-PointLayer 只能存点，展开后的连线是 LineString。请确保使用的是支持 PointLayer 的 SpiderManager 版本，并正确引入了 maptalks-spider。
+PointLayer 只能存点，展开后的连线是 LineString。请确保使用的是支持 PointLayer 的 SpiderManager 版本，并正确引入了 giser-maptalks-spider。
 
 **Q: 修改源码后 demo 没变化**
 
-debug 页面加载的是 `dist/maptalks-spider.js`，修改源码后需重新构建：
+debug 页面加载的是 `dist/giser-maptalks-spider.js`，修改源码后需重新构建：
 
 ```bash
 npm run build-dev
