@@ -1,0 +1,17 @@
+{
+  "name": "maptalks-spider-example",
+  "version": "1.0.0",
+  "description": "Example using giser-maptalks-spider via npm",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "giser-maptalks-spider": "^1.0.1",
+    "maptalks-gl": "^0.124.4"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

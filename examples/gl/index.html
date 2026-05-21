@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>maptalks-spider npm example (PointLayer)</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; }
+    #map { width: 100%; height: 100%; }
+
+    #info {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      z-index: 1000;
+    }
+
+    #log {
+      position: absolute;
+      bottom: 80px;
+      left: 10px;
+      background: rgba(0,0,0,0.85);
+      color: #0f0;
+      font-family: monospace;
+      font-size: 11px;
+      padding: 8px;
+      max-width: 320px;
+      max-height: 140px;
+      overflow: auto;
+      z-index: 1000;
+    }
+
+    .popup-meta {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .popup-pill {
+      background: #e6f7ea;
+      color: #1b5e20;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+    }
+
+    .popup-desc {
+      margin: 10px 0;
+      font-size: 13px;
+      color: #333;
+    }
+
+    .popup-coord {
+      font-family: monospace;
+      font-size: 12px;
+      border-top: 1px solid #eee;
+      padding-top: 6px;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+<div id="map"></div>
+<div id="info">点击聚合点展开 Spider</div>
+<div id="log"></div>
+
+<script type="module">
+  import * as maptalks from 'maptalks-gl';
+  import { SpiderManager } from 'giser-maptalks-spider';
+
+  const CONFIG = {
+    center: [121.507, 31.247],
+    zoom: 16
+  };
+
+  const DATA = [
+    ...Array.from({ length: 20 }).map((_, i) => ({
+      id: i + 1,
+      name: [
+        '星巴克','瑞幸','太平洋','麦咖啡','库迪','奈茶','喜茶','乐乐茶','贡茶','CoCo',
+        '一点点','益禾堂','蜜雪','书亦','茶百道','沪上阿姨','喜姐','藤本','烧烤','火锅'
+      ][i],
+      desc: `门店 #${i + 1}`,
+      coord: [121.507, 31.247]
+    })),
+    { id: 21, name: '海底捞', desc: '火锅', coord: [121.510, 31.248] },
+    { id: 22, name: '呷哺', desc: '小火锅', coord: [121.510, 31.248] }
+  ];
+
+  function log(msg) {
+    const el = document.getElementById('log');
+    const p = document.createElement('div');
+    p.textContent = '> ' + msg;
+    el.appendChild(p);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function popup(item) {
+    const [lng, lat] = item.coord || [];
+    return `
+      <div>
+        <div class="popup-meta">
+          <span class="popup-pill">ID ${item.id}</span>
+          <span class="popup-pill">${item.name}</span>
+        </div>
+        <div class="popup-desc">${item.desc || '暂无描述'}</div>
+        <div class="popup-coord">${lng?.toFixed(6)} / ${lat?.toFixed(6)}</div>
+      </div>
+    `;
+  }
+
+  const map = new maptalks.Map('map', {
+    center: CONFIG.center,
+    zoom: CONFIG.zoom,
+    pitch: 0
+  });
+
+  const base = new maptalks.TileLayer('base', {
+      urlTemplate: 'https://webrd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
+      subdomains: [1, 2, 3, 4]
+  });
+  map.setBaseLayer(base);
+
+  const pointLayer = new maptalks.PointLayer('markers').addTo(map);
+
+  const spider = new SpiderManager(pointLayer, {
+    spiderRadius: 140,
+    spiderMode: 'grid',
+    spiderLineColor: '#4a8af4',
+    spiderLineWidth: 4,
+    spiderSpread: 1.5,
+    animationDuration: 120,
+
+    onSpiderMarkerClick(item, marker) {
+      log(`点击: ${item.name}`);
+      if (!marker?.setInfoWindow) return;
+      marker.setInfoWindow({
+        title: item.name,
+        content: popup(item),
+        width: 240
+      });
+      marker.openInfoWindow();
+    }
+  });
+
+  DATA.forEach(item => {
+    spider.addMarker(item.coord, item);
+  });
+
+  log(`加载完成: ${DATA.length} 个点`);
+
+  map.on('click', () => {
+    spider.unspiderfy();
+  });
+
+  document.getElementById('info').textContent = 'NPM 示例已启动 (PointLayer GL)';
+</script>
+</body>
+</html>
